@@ -33,12 +33,14 @@ classdef RNN < matlab.mixin.SetGet
       %  n denotes the length of the sequence you want to generate
       h{1} = h0;
       x = x0;
+      sequence = zeros();
       for i = 1:size(x,2)
         a{i} = obj.W * h{i} + obj.U * x(:,i) + obj.b;
         h{i+1} = tanh(a{i});
         o{i} = V*h{i+1} + c;
         p{i} = SOFTMAX({o{i}});
       end
+
     end
     function ret = SOFTMAX(P)
       e = exp(P);
