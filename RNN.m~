@@ -1,0 +1,157 @@
+classdef RNN < matlab.mixin.SetGet
+
+  properties (Constant)
+    eta = .1;
+    seq_length = 25;
+  end
+  properties
+    % properties
+    m;
+    sig;
+    % Vectors
+    b;
+    c;
+    % Weight matrixes
+    U;
+    W;
+    V;
+    grad;
+  end
+  methods
+    function obj = RNN(m, K, sig)
+      obj.sig = sig;
+      obj.m =  m;
+      obj.b =  zeros(m,1);
+      obj.c =  zeros(K,1);
+
+      obj.U = randn(m, K)*sig;
+      obj.W = randn(m, m)*sig;
+      obj.V = randn(K,m)*sig;
+      obj.grad = Gradients(obj.W, obj.V, obj.U, obj.b, obj.c);
+
+    end
+    function [o,p] = synthesize(obj, h0, x0, n)
+      %  h0 (the hidden state at time 0)
+      %  x0 represent the first (dummy) input
+      %  n denotes the length of the sequence you want to generate
+      o = zeros(size(V,1),size(x,2));
+      a = obj.W * h0 + obj.U * x0 + obj.b;
+      h = tanh(a);
+      o = V*h + obj.c;
+      p = obj.SOFTMAX(o);
+
+    end
+    function train(obj, X, Y, h0)
+%       for i = 1:size(X,2)
+        % P = obj.ForwardPass(h0, X(:,i));
+%         obj.GradientDescent(X(:,i),Y(:,i),h0);
+%       end
+        obj.GradientDescent(X,Y,h0);
+
+    end
+    function [a, o, h, p] = ForwardPass(obj, h0, x0, n)
+%        h0 (the hidden state at time 0)
+%        x0 represent the first (dummy) input
+%        n denotes the length of the sequence you want to generate
+      h = zeros(size(obj.W,1),size(x0,2)+1);
+      h(:,1) = h0;
+      a = zeros(size(obj.W,1),size(x0,2));
+      x = x0;
+      o = zeros(size(obj.V,1),size(x,2));
+      p = zeros(size(obj.V,1),size(x,2));
+      
+      for i = 1:size(x,2)
+        a(:,i) = obj.W * h(:,i) + obj.U * x(:,i) + obj.b;
+        h(:,i+1) = tanh(a(:,i));
+        o(:,i) = obj.V*h(:,i+1) + obj.c;
+        p(:,i) = obj.SOFTMAX(o(:,i));
+      end
+
+%        h0 (the hidden state at time 0)
+%        x0 represent the first (dummy) input
+%        n denotes the length of the sequence you want to generate
+
+%       h = h0;
+%       x = x0;
+%       a = obj.W * h + obj.U * x + obj.b;
+%       h = tanh(a);
+%       o = obj.V*h + obj.c;
+%       p = obj.SOFTMAX(o);
+
+    end
+    function BackProp(obj, P, Y)
+      P = obj.ForwardPass(h0, X);
+      G = -(Y-P);
+    end
+    function ret = SOFTMAX(obj, P)
+      e = exp(P);
+      one = ones(size(P,1),1);
+      split = one'*e;
+      ret = e/split(1,1);
+    end
+    function GradientDescent(obj, X, Y,h0)
+      [a, o, h, P] = obj.ForwardPass(h0, X, size(X,2));
+      % G = grad_L_over_o
+      size(Y)
+      size(P)
+      G = -(Y-P)';
+      t = size(Y,2);
+
+      L_o = G;
+      
+      L_W = zeros(size(obj.grad.W));
+      L_V = zeros(size(obj.grad.V));
+      L_U = zeros(size(obj.grad.U));
+      L_h = zeros(100,t);
+      L_a = zeros(100,t);
+
+      for i = 1:t
+        L_V = L_V + G(i,:)'*h(:,i+1)';
+      end
+      obj.grad.V = L_V;
+
+      
+      L_h(:,t) = (L_o(t,:)*obj.V)';
+      L_a(:,t) = (L_h(:,t)'*diag(1 - tanh(a(:,t)).^2))';
+      for i = (t-1):-1:1
+        L_h(:,i) = (L_o(i,:)*obj.V)' + (L_a(:,i)'*obj.W)';
+        L_a(:,i) = (L_h(:,i)'* diag(1 - tanh(a(:,i)).^2))';
+        L_W = L_W + L_a(:,i)*h(:,i+1)';
+      end
+
+
+      
+      
+      for i = 1:(t)
+        L_W = L_W + L_a(:,i)*h(:,i+1)'; % <--- Must check the size of h to g, might be i+1
+      end
+      obj.grad.W = L_W;
+      
+      
+      for i = 1:(t)
+        L_U = L_U + L_a{i}''*X(:,i)'; % <--- Must check the size of h to g, might be i+1
+      end
+      obj.grad.U = L_U;
+
+%       grad_h_over_o = G * obj.V;
+%       grad_a_to_L(:,t) = grad_h_to_L * diag(1 ??? tanh2(a{i}));
+%       for i = (t-1):-1:1
+%         grad_h(:,i) = G(:,i) * obj.V + grad_a_to_L(:,i+1) * W
+%         grad_a_to_L(:,i) = grad_h(:,i) * diag(1 ??? tanh2(a{i}));
+%       end
+
+    end
+    function ii = randCharSelect(obj, p,cp)
+      cp = cumsum(p);
+      a = rand;
+      ixs = find(cp-a >0);
+      ii = ixs(1);
+    end
+    function cost_val = cost(Y, P)
+      cost_val = 0;
+      for i = 1:size(Y,2)
+        cost_val = cost_val - log(Y(:,i)'*P(:,i));
+      end
+    end
+  end
+end
