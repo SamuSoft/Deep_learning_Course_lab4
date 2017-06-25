@@ -91,7 +91,7 @@ classdef RNN < matlab.mixin.SetGet
       [a, o, h, P] = obj.ForwardPass(h0, X, size(X,2));
       G = -(Y-P)';
       t = size(Y,2);
-
+      debug = false;
       L_o = G;
       L_W = zeros(size(obj.grad.W));
       L_V = zeros(size(obj.grad.V));
@@ -110,26 +110,29 @@ classdef RNN < matlab.mixin.SetGet
         L_V = L_V + G(i,:)'*h(:,i+1)';
         L_U = L_U + L_a(:,i)*X(:,i)';
 
-        if sum(isnan(L_h(:,i))) > 0
-            error(strcnt('The problem is h at ', int2str(i)));
-        end
-        if sum(isnan(L_a(:,i))) > 0
-            error(strcnt('The problem is L_a at ', int2str(i)));
-        end
-        if sum(sum(isnan(L_W))) > 0
-            error(strcnt('The problem is L_W at ', int2str(i)));
-        end
-        if sum(sum(isnan(L_V))) > 0
-            error(strcnt('The problem is L_V at ', int2str(i)));
-        end
-        if sum(sum(isnan(L_U))) > 0
-            error(strcnt('The problem is L_U at ', int2str(i)));
-        end
-
-
         % TODO
         % L_b = L_b + G(i,:)';
         % L_c = L_c;
+
+
+        % Debug code;
+        if debug == true
+          if sum(isnan(L_h(:,i))) > 0
+              error(strcnt('The problem is h at ', int2str(i)));
+          end
+          if sum(isnan(L_a(:,i))) > 0
+              error(strcnt('The problem is L_a at ', int2str(i)));
+          end
+          if sum(sum(isnan(L_W))) > 0
+              error(strcnt('The problem is L_W at ', int2str(i)));
+          end
+          if sum(sum(isnan(L_V))) > 0
+              error(strcnt('The problem is L_V at ', int2str(i)));
+          end
+          if sum(sum(isnan(L_U))) > 0
+              error(strcnt('The problem is L_U at ', int2str(i)));
+          end
+        end
 
       end
       obj.grad.W = L_W;
@@ -161,8 +164,6 @@ classdef RNN < matlab.mixin.SetGet
       if sum(sum(isnan(ret))) > 0
           error('The problem is Softmax');
       end
-
-
     end
     function ii = randCharSelect(p)
       cp = cumsum(p);
